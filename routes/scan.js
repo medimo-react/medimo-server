@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const { extractTextFromImage } = require('../utils/ocr');
+const { extractTextFromImage } = require('../models/ocr');
 
 const upload = multer({ storage: multer.memoryStorage() });
 
