@@ -4,6 +4,7 @@ const cors = require('cors');
 const connectDB = require('./db');
 
 const medicineRouter = require('./routes/medicine');
+const scanRouter = require('./routes/scan');
 const authRouter = require('./routes/auth');
 const bookmarkRouter = require('./routes/bookmark');
 
@@ -16,6 +17,7 @@ app.use(express.json());
 
 app.use('/api/auth', authRouter);
 app.use('/api/medicine', medicineRouter);
+app.use('/api/scan', scanRouter);
 app.use('/api/bookmarks', bookmarkRouter);
 
 const PORT = process.env.PORT || 5000;
