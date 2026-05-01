@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
 const medicineSchema = new mongoose.Schema(
   {
@@ -22,8 +22,11 @@ const medicineSchema = new mongoose.Schema(
     validTerm: String, // 유효기간
     permitDate: String, // 허가일자
     className: String, // 전문/일반 구분
+
+    interaction: String,
+    storageMethod: String,
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
-module.exports = mongoose.model('Medicine', medicineSchema, 'medicine');
+module.exports = mongoose.model("Medicine", medicineSchema, "medicine");
