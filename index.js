@@ -8,6 +8,7 @@ const scanRouter = require('./routes/scan');
 const authRouter = require('./routes/auth');
 const bookmarkRouter = require('./routes/bookmark');
 const durRouter = require("./routes/dur");
+const summaryRouter = require("./routes/summary");
 
 const app = express();
 
@@ -37,6 +38,7 @@ app.use('/api/medicine', medicineRouter);
 app.use('/api/scan', scanRouter);
 app.use('/api/bookmarks', bookmarkRouter);
 app.use("/api/dur", durRouter);
+app.use("/api/summary", summaryRouter);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
