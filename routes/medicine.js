@@ -14,23 +14,42 @@ const Medicine = require('../models/Medicine');
  */
 router.get('/', async (req, res) => {
   try {
-    const { q } = req.query;
-    const filter = q ? { name: { $regex: q, $options: 'i' } } : {};
-    let medicines = await Medicine.find(filter).sort({ createdAt: -1 });
+    const { q, refresh } = req.query;
 
-    if (medicines.length === 0 && q) {
+    const shouldRefresh = refresh === 'true';
+    const filter = q ? { name: { $regex: q, $options: 'i' } } : {};
+
+    let medicines = [];
+
+    // refresh=true가 아닐 때만 DB 먼저 조회
+    if (!shouldRefresh) {
+      medicines = await Medicine.find(filter).sort({ createdAt: -1 });
+    }
+
+    // DB에 없거나 refresh=true이면 식약처 API 재조회
+    if ((medicines.length === 0 || shouldRefresh) && q) {
       const result = await fetchMedicineInfo(q);
+
       if (result) {
+        // refresh=true이면 기존 저장 데이터 삭제 후 새로 저장
+        if (shouldRefresh) {
+          await Medicine.deleteMany(filter);
+        }
+
         const saved = await Medicine.create(result);
         medicines = [saved];
       }
     }
 
     res.set('Cache-Control', 'no-store');
-    res.json(medicines);
+    return res.json(medicines);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: '데이터를 불러오지 못했습니다.' });
+    console.error('[MEDICINE ROUTE ERROR]', err);
+
+    return res.status(500).json({
+      error: '데이터를 불러오지 못했습니다.',
+      message: err.message,
+    });
   }
 });
 
