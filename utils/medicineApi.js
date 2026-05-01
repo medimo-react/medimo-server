@@ -60,7 +60,9 @@ async function fetchEasyDrugInfo(itemName) {
       effect: item.efcyQesitm,
       usage: item.useMethodQesitm,
       caution: item.atpnQesitm,
+      interaction: item.intrcQesitm,
       sideEffect: item.seQesitm,
+      storageMethod: item.depositMethodQesitm,
       image: item.itemImage,
       source: "easyDrug",
     };
@@ -77,7 +79,7 @@ async function fetchPermitDrugInfo(itemName) {
     const res = await axios.get(PERMIT_DRUG_URL, {
       params: {
         serviceKey: API_KEY,
-        item_name: itemName,
+        itemName: itemName,
         numOfRows: 1,
         pageNo: 1,
         type: "json",
@@ -86,13 +88,13 @@ async function fetchPermitDrugInfo(itemName) {
 
     console.log(
       "[PERMIT DRUG API RESPONSE]",
-      JSON.stringify(res.data, null, 2)
+      JSON.stringify(res.data, null, 2),
     );
 
     const item = getItems(res.data)[0];
     if (!item) return null;
 
-    const name = pick(item, ["ITEM_NAME", "item_name", "itemName"]);
+    const name = pick(item, ["itemName", "itemName", "itemName"]);
     const company = pick(item, ["ENTP_NAME", "entp_name", "entpName"]);
     const ingredient = pick(item, [
       "ITEM_INGR_NAME",
