@@ -27,6 +27,31 @@ OCR 원문:
 ${rawText}
 `;
 
+const buildSummaryPrompt = ({ medicine, durList = [] }) => `
+너는 사용자가 의약품 정보를 빠르게 이해할 수 있도록 한 줄로 정리한다.
+
+반드시 아래 JSON 데이터에 있는 내용만 근거로 작성한다.
+데이터에 없는 효능, 복용법, 부작용, 주의사항, 병용금기 정보는 절대 추측하지 않는다.
+
+규칙:
+1. 한국어로 작성한다.
+2. 한 문장만 작성한다.
+3. 90자 이내로 작성한다.
+4. 쉬운 말로 작성한다.
+5. 병용금기 정보가 있으면 반드시 포함한다.
+6. 병용금기 정보가 없으면 억지로 언급하지 않는다.
+7. "안전하다", "문제없다" 같은 단정 표현은 쓰지 않는다.
+8. 반드시 JSON 형식으로만 응답한다.
+
+응답 형식:
+{
+  "summary": "한 줄 요약 문장"
+}
+
+의약품 데이터:
+${JSON.stringify({ medicine, durList }, null, 2)}
+`;
+
 const parseCandidates = (text) => {
   const cleaned = text
     .replace(/```json/g, '')
@@ -39,20 +64,33 @@ const parseCandidates = (text) => {
     return [];
   }
 
-  return [...new Set(
-    parsed.candidates
-      .map((item) => String(item).trim())
-      .filter(Boolean)
-  )];
+  return [
+    ...new Set(
+      parsed.candidates
+        .map((item) => String(item).trim())
+        .filter(Boolean)
+    ),
+  ];
 };
 
-const extractMedicines = async (rawText) => {
-  if (!GEMINI_API_KEY) {
-    throw new Error('GEMINI_API_KEY가 설정되지 않았습니다.');
+const parseSummary = (text) => {
+  const cleaned = text
+    .replace(/```json/g, '')
+    .replace(/```/g, '')
+    .trim();
+
+  const parsed = JSON.parse(cleaned);
+
+  if (!parsed.summary) {
+    return '';
   }
 
-  if (!rawText || !rawText.trim()) {
-    return [];
+  return String(parsed.summary).trim();
+};
+
+const requestGemini = async ({ prompt, responseSchema }) => {
+  if (!GEMINI_API_KEY) {
+    throw new Error('GEMINI_API_KEY가 설정되지 않았습니다.');
   }
 
   const response = await fetch(GEMINI_URL, {
@@ -66,7 +104,7 @@ const extractMedicines = async (rawText) => {
         {
           parts: [
             {
-              text: buildPrompt(rawText),
+              text: prompt,
             },
           ],
         },
@@ -74,18 +112,7 @@ const extractMedicines = async (rawText) => {
       generationConfig: {
         temperature: 0.1,
         responseMimeType: 'application/json',
-        responseSchema: {
-          type: 'OBJECT',
-          properties: {
-            candidates: {
-              type: 'ARRAY',
-              items: {
-                type: 'STRING',
-              },
-            },
-          },
-          required: ['candidates'],
-        },
+        responseSchema,
       },
     }),
   });
@@ -97,7 +124,29 @@ const extractMedicines = async (rawText) => {
     throw new Error('Gemini API 요청에 실패했습니다.');
   }
 
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+};
+
+const extractMedicines = async (rawText) => {
+  if (!rawText || !rawText.trim()) {
+    return [];
+  }
+
+  const text = await requestGemini({
+    prompt: buildPrompt(rawText),
+    responseSchema: {
+      type: 'OBJECT',
+      properties: {
+        candidates: {
+          type: 'ARRAY',
+          items: {
+            type: 'STRING',
+          },
+        },
+      },
+      required: ['candidates'],
+    },
+  });
 
   if (!text) {
     return [];
@@ -106,6 +155,32 @@ const extractMedicines = async (rawText) => {
   return parseCandidates(text);
 };
 
+const summarizeMedicineBrief = async ({ medicine, durList = [] }) => {
+  if (!medicine) {
+    return '';
+  }
+
+  const text = await requestGemini({
+    prompt: buildSummaryPrompt({ medicine, durList }),
+    responseSchema: {
+      type: 'OBJECT',
+      properties: {
+        summary: {
+          type: 'STRING',
+        },
+      },
+      required: ['summary'],
+    },
+  });
+
+  if (!text) {
+    return '';
+  }
+
+  return parseSummary(text);
+};
+
 module.exports = {
   extractMedicines,
+  summarizeMedicineBrief,
 };
