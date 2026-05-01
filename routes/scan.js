@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const { extractTextFromImage } = require('../models/ocr');
+const { extractMedicines } = require('../utils/gemini');
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -29,9 +30,15 @@ router.post('/', upload.single('image'), async (req, res) => {
     console.log('[SCAN] rawText:', rawText);
 
     // Step 2: Gemini 약품명 추출 (미구현 - 다음 작업자)
-    // const candidates = await extractMedicines(rawText);
+     const candidates = await extractMedicines(rawText);
 
-    res.json({ rawText });
+    console.log('[SCAN] candidates:', candidates);
+
+    return res.json({
+      rawText,
+      candidates,
+    });
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: '처리 중 오류가 발생했습니다.' });

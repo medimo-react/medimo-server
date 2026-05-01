@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
 const medicineSchema = new mongoose.Schema(
   {
@@ -9,8 +9,24 @@ const medicineSchema = new mongoose.Schema(
     sideEffect: String, //부작용
     image: String, //이미지 URL
     rawText: String, //OCR 원문
+
+    // 조회 출처
+    // easyDrug: e약은요 API
+    // permit: 의약품 제품 허가정보 API
+    source: String,
+
+    // 의약품 제품 허가정보 API에서 내려오는 정보
+    company: String, // 제조사
+    ingredient: String, // 주성분
+    storageMethod: String, // 저장방법
+    validTerm: String, // 유효기간
+    permitDate: String, // 허가일자
+    className: String, // 전문/일반 구분
+
+    interaction: String,
+    storageMethod: String,
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
-module.exports = mongoose.model('Medicine', medicineSchema, 'medicine');
+module.exports = mongoose.model("Medicine", medicineSchema, "medicine");
