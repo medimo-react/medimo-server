@@ -155,6 +155,41 @@ const extractMedicines = async (rawText) => {
   return parseCandidates(text);
 };
 
+const extractMedicinesFallback = (rawText) => {
+  if (!rawText || !rawText.trim()) return [];
+
+  const medicinePattern =
+    /[#]?[가-힣A-Za-z0-9]+(?:정|캡슐|시럽|현탁액|액|과립|산|주사|주|크림|연고|겔|패취|점안액)(?:\s?\[[^\]]+\])?/g;
+
+  const matches = rawText.match(medicinePattern) || [];
+
+  const excludeWords = [
+    "복약지도",
+    "약품명",
+    "먹는약",
+    "영수증",
+    "조제약",
+    "처방약",
+    "현금영수증",
+    "사업자등록번호",
+  ];
+
+  return [
+    ...new Set(
+      matches
+        .map((item) =>
+          item
+            .replace(/^#/, "")
+            .replace(/\s?\[.*?\]/g, "")
+            .trim()
+        )
+        .filter(Boolean)
+        .filter((item) => item.length >= 2)
+        .filter((item) => !excludeWords.some((word) => item.includes(word)))
+    ),
+  ];
+};
+
 const summarizeMedicineBrief = async ({ medicine, durList = [] }) => {
   if (!medicine) {
     return '';
@@ -183,4 +218,5 @@ const summarizeMedicineBrief = async ({ medicine, durList = [] }) => {
 module.exports = {
   extractMedicines,
   summarizeMedicineBrief,
+  extractMedicinesFallback,
 };
