@@ -9,6 +9,7 @@ const medicineSchema = new mongoose.Schema(
     sideEffect: String, //부작용
     image: String, //이미지 URL
     rawText: String, //OCR 원문
+    dosage: String, // 북마크/목록에서 보여줄 복용법
 
     // 조회 출처
     // easyDrug: e약은요 API
@@ -24,7 +25,10 @@ const medicineSchema = new mongoose.Schema(
     className: String, // 전문/일반 구분
 
     interaction: String,
-    storageMethod: String,
+    productType: String,
+    status: String,
+    ediCode: String,
+    normalizedName: String,
   },
   { timestamps: true },
 );
