@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const AnalysisRecord = require('../models/AnalysisRecord');
+const authMiddleware = require('../middleware/auth');
 
 // POST /api/analysis - 분석 결과 저장
-router.post('/', async (req, res) => {
+router.post('/', authMiddleware, async (req, res) => {
   try {
     const { candidates, medicineResults } = req.body;
 
@@ -15,6 +16,7 @@ router.post('/', async (req, res) => {
     const cautionCount = medicineResults.filter(r => r.durList?.length > 0).length;
 
     const record = await AnalysisRecord.create({
+      userId: req.user.id,
       candidates,
       medicineCount,
       cautionCount,
@@ -28,10 +30,10 @@ router.post('/', async (req, res) => {
   }
 });
 
-// GET /api/analysis - 목록 조회
-router.get('/', async (req, res) => {
+// GET /api/analysis - 내 기록 목록 조회
+router.get('/', authMiddleware, async (req, res) => {
   try {
-    const records = await AnalysisRecord.find()
+    const records = await AnalysisRecord.find({ userId: req.user.id })
       .select('candidates medicineCount cautionCount createdAt')
       .sort({ createdAt: -1 });
 
@@ -43,9 +45,12 @@ router.get('/', async (req, res) => {
 });
 
 // GET /api/analysis/:id - 상세 조회
-router.get('/:id', async (req, res) => {
+router.get('/:id', authMiddleware, async (req, res) => {
   try {
-    const record = await AnalysisRecord.findById(req.params.id);
+    const record = await AnalysisRecord.findOne({
+      _id: req.params.id,
+      userId: req.user.id,
+    });
 
     if (!record) return res.status(404).json({ error: '기록을 찾을 수 없습니다.' });
 
