@@ -34,8 +34,8 @@ router.post('/', authMiddleware, async (req, res) => {
 router.get('/', authMiddleware, async (req, res) => {
   try {
     const records = await AnalysisRecord.find({ userId: req.user.id })
-      .select('candidates medicineCount cautionCount createdAt')
-      .sort({ createdAt: -1 });
+      .select('candidates medicineCount cautionCount createdAt isPinned pinnedAt')
+      .sort({ isPinned: -1, pinnedAt: -1, createdAt: -1 });
 
     return res.json(records);
   } catch (err) {
