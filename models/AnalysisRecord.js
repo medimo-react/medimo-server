@@ -7,6 +7,7 @@ const analysisRecordSchema = new mongoose.Schema(
     medicineCount:  { type: Number, default: 0 },
     cautionCount:   { type: Number, default: 0 }, // durList가 있는 약품 수
     medicineResults: [{ type: mongoose.Schema.Types.Mixed }],
+    title:          { type: String, default: null },
     isPinned:       { type: Boolean, default: false },
     pinnedAt:       { type: Date, default: null },
   },

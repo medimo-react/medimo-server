@@ -34,13 +34,40 @@ router.post('/', authMiddleware, async (req, res) => {
 router.get('/', authMiddleware, async (req, res) => {
   try {
     const records = await AnalysisRecord.find({ userId: req.user.id })
-      .select('candidates medicineCount cautionCount createdAt isPinned pinnedAt')
-      .sort({ isPinned: -1, pinnedAt: -1, createdAt: -1 });
+    .select('candidates medicineCount cautionCount createdAt title isPinned pinnedAt')
+    .sort({ isPinned: -1, pinnedAt: -1, createdAt: -1 });
 
     return res.json(records);
   } catch (err) {
     console.error('[ANALYSIS LIST ERROR]', err);
     res.status(500).json({ error: '목록을 불러오지 못했습니다.' });
+  }
+});
+
+// PATCH /api/analysis/:id/title - 이름 변경
+router.patch('/:id/title', authMiddleware, async (req, res) => {
+  try {
+    const title = req.body.title?.trim();
+
+    if (!title) {
+      return res.status(400).json({ error: '제목을 입력해주세요.' });
+    }
+    if (title.length > 50) {
+      return res.status(400).json({ error: '제목은 50자 이하로 입력해주세요.' });
+    }
+
+    const record = await AnalysisRecord.findOneAndUpdate(
+        { _id: req.params.id, userId: req.user.id },
+        { title },
+        { new: true, select: 'title' },
+    );
+
+    if (!record) return res.status(404).json({ error: '기록을 찾을 수 없습니다.' });
+
+    return res.json({ title: record.title });
+  } catch (err) {
+    console.error('[ANALYSIS RENAME ERROR]', err);
+    res.status(500).json({ error: '이름 변경에 실패했습니다.' });
   }
 });
 
