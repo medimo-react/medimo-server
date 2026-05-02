@@ -2,15 +2,21 @@ const mongoose = require('mongoose');
 
 const bookmarkSchema = new mongoose.Schema(
   {
-    id:       { type: String, required: true },
-    name:     { type: String },
-    engName:  { type: String, default: '' },
+    id: { type: String, required: true },
+    name: { type: String },
+    normalizedName: { type: String, default: "" },
+    engName: { type: String, default: "" },
     category: { type: String },
-    dosage:   { type: String },
-    folder:   { type: String, default: '기타' },
-    starred:  { type: Boolean, default: false },
-    warning:  { type: Boolean, default: false },
-    date:     { type: String },
+    dosage: { type: String },
+
+    folder: {
+      type: [String],
+      default: ["기타"],
+    },
+
+    starred: { type: Boolean, default: false },
+    warning: { type: Boolean, default: false },
+    date: { type: String },
   },
   { id: false }
 );
