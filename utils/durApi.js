@@ -213,17 +213,20 @@ async function fetchDurByProductName(itemName) {
   try {
     console.log("[DUR PRODUCT QUERY]", itemName);
 
-    const serviceKey = API_KEY.includes("%")
-      ? decodeURIComponent(API_KEY)
-      : API_KEY;
+    const getServiceKey = () => {
+      if (!API_KEY) return "";
+      return API_KEY.includes("%") ? decodeURIComponent(API_KEY) : API_KEY;
+    };
+
+    const serviceKey = getServiceKey();
 
     const res = await axios.get(DUR_PRODUCT_CONTRA_URL, {
       params: {
         serviceKey,
-        pageNo: 1,
-        numOfRows: 100,
-        type: "json",
         itemName,
+        numOfRows: 100,
+        pageNo: 1,
+        type: "json",
       },
     });
 
@@ -239,11 +242,7 @@ async function fetchDurByProductName(itemName) {
     console.error("[DUR PRODUCT API ERROR DATA]", err.response?.data);
     console.error("[DUR PRODUCT API ERROR MESSAGE]", err.message);
 
-    throw new Error(
-      `DUR 품목정보 API 요청 실패: ${err.response?.status || ""} ${
-        err.response?.data || err.message
-      }`,
-    );
+    return [];
   }
 }
 
