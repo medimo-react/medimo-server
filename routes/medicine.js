@@ -28,26 +28,32 @@ const cleanMedicineKeyword = (value = "") => {
  */
 router.get("/", async (req, res) => {
   try {
-    const { q, refresh } = req.query;
+    const { q } = req.query;
+    const shouldRefresh = req.query.refresh === "true" || req.query.refresh === "1";
 
     const keyword = q ? cleanMedicineKeyword(q) : "";
+
+    if (!keyword) {
+      return res.json([]);
+    }
+
     const escapedKeyword = escapeRegex(keyword);
 
-    const filter = keyword
-      ? { name: { $regex: escapedKeyword, $options: "i" } }
-      : {};
+    const filter = {
+      name: { $regex: escapedKeyword, $options: "i" },
+    };
 
     let medicines = [];
 
-    if (!refresh) {
+    if (!shouldRefresh) {
       medicines = await Medicine.find(filter).sort({ createdAt: -1 });
     }
 
-    if ((medicines.length === 0 && keyword) || refresh) {
+    if (medicines.length === 0 || shouldRefresh) {
       const result = await fetchMedicineInfo(keyword);
 
       if (result) {
-        if (refresh) {
+        if (shouldRefresh) {
           await Medicine.deleteMany(filter);
         }
 
