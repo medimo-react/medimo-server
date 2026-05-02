@@ -27,7 +27,6 @@ router.post("/", upload.single("image"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: "이미지가 없습니다." });
 
-    // Step 1: Google Vision OCR로 텍스트 추출
     const rawText = await extractTextFromImage(req.file.buffer);
 
     console.log("[SCAN] rawText:", rawText);

@@ -12,6 +12,7 @@ const authRouter = require('./routes/auth');
 const bookmarkRouter = require('./routes/bookmark');
 const durRouter = require("./routes/dur");
 const summaryRouter = require("./routes/summary");
+const analysisRouter = require('./routes/analysis');
 
 const app = express();
 
@@ -20,6 +21,7 @@ connectDB();
 const allowedOrigins = [
   'http://localhost:5173',
   'http://127.0.0.1:5173',
+  'http://192.168.200.102:5173',
   process.env.CLIENT_URL,
 ];
 
@@ -42,6 +44,7 @@ app.use('/api/scan', scanRouter);
 app.use('/api/bookmarks', bookmarkRouter);
 app.use("/api/dur", durRouter);
 app.use("/api/summary", summaryRouter);
+app.use('/api/analysis', analysisRouter);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
