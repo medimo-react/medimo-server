@@ -6,6 +6,13 @@ const {
   fetchDurByProductName,
 } = require("../utils/durApi");
 
+const normalizeProductName = (name = "") =>
+  String(name)
+    .replace(/\([^)]*\)/g, "") // 괄호 안 성분명 제거
+    .replace(/\[[^\]]*\]/g, "") // 대괄호 내용 제거
+    .replace(/\s+/g, " ")
+    .trim();
+
 /**
  * GET /api/dur/ingredient?name=Metoclopramide
  * 성분명 기준 DUR 병용금기 조회
@@ -47,7 +54,12 @@ router.get("/product", async (req, res) => {
       });
     }
 
-    const result = await fetchDurByProductName(name);
+    const productName = normalizeProductName(name);
+
+    console.log("[DUR PRODUCT RAW NAME]", name);
+    console.log("[DUR PRODUCT NORMALIZED NAME]", productName);
+
+    const result = await fetchDurByProductName(productName);
 
     return res.json(result);
   } catch (err) {
