@@ -2,6 +2,11 @@ const axios = require("axios");
 
 const API_KEY = process.env.MEDICINE_API_KEY;
 
+const getServiceKey = () => {
+  if (!API_KEY) return "";
+  return API_KEY.includes("%") ? decodeURIComponent(API_KEY) : API_KEY;
+};
+
 // 1차: e약은요 API
 const EASY_DRUG_URL =
   "http://apis.data.go.kr/1471000/DrbEasyDrugInfoService/getDrbEasyDrugList";
@@ -15,10 +20,8 @@ const getItems = (data) => {
 
   if (!items) return [];
 
-  // JSON 응답이 배열로 올 때
   if (Array.isArray(items)) return items;
 
-  // XML 변환형/일부 API 응답에서 item으로 감싸질 때 대비
   if (Array.isArray(items.item)) return items.item;
   if (items.item) return [items.item];
 
@@ -27,19 +30,46 @@ const getItems = (data) => {
 
 const pick = (obj, keys) => {
   for (const key of keys) {
-    if (obj?.[key]) return obj[key];
+    if (obj?.[key] !== undefined && obj?.[key] !== null && obj?.[key] !== "") {
+      return obj[key];
+    }
   }
 
   return "";
+};
+
+const cleanDisplayName = (value = "") =>
+  String(value)
+    .replace(/\([^)]*\)/g, "")
+    .replace(/\[[^\]]*\]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const normalizeName = (value = "") =>
+  String(value)
+    .replace(/\([^)]*\)/g, "")
+    .replace(/\[[^\]]*\]/g, "")
+    .replace(/\s+/g, "")
+    .toLowerCase();
+
+const isMatchedMedicine = (apiName, keyword) => {
+  const name = normalizeName(apiName);
+  const query = normalizeName(keyword);
+
+  if (!name || !query) return false;
+
+  return name.includes(query) || query.includes(name);
 };
 
 async function fetchEasyDrugInfo(itemName) {
   try {
     console.log("[EASY DRUG API QUERY]", itemName);
 
+    const serviceKey = getServiceKey();
+
     const res = await axios.get(EASY_DRUG_URL, {
       params: {
-        serviceKey: API_KEY,
+        serviceKey,
         itemName,
         numOfRows: 1,
         pageNo: 1,
@@ -47,23 +77,33 @@ async function fetchEasyDrugInfo(itemName) {
       },
     });
 
-    // console.log("[EASY DRUG API RESPONSE]", JSON.stringify(res.data, null, 2));
-
     const item = getItems(res.data)[0];
+
     if (!item) return null;
 
-    // console.log("[PERMIT DRUG ITEM KEYS]", Object.keys(item));
-    // console.log("[PERMIT DRUG ITEM]", item);
-
     return {
-      name: item.itemName,
-      effect: item.efcyQesitm,
-      usage: item.useMethodQesitm,
-      caution: item.atpnQesitm,
-      interaction: item.intrcQesitm,
-      sideEffect: item.seQesitm,
-      storageMethod: item.depositMethodQesitm,
-      image: item.itemImage,
+      name: item.itemName || "",
+      normalizedName: cleanDisplayName(item.itemName || ""),
+
+      effect: item.efcyQesitm || "",
+      usage: item.useMethodQesitm || "",
+      dosage: item.useMethodQesitm || "",
+
+      caution: item.atpnQesitm || "",
+      interaction: item.intrcQesitm || "",
+      sideEffect: item.seQesitm || "",
+      storageMethod: item.depositMethodQesitm || "",
+      validTerm: "",
+      image: item.itemImage || "",
+
+      company: "",
+      ingredient: "",
+      permitDate: "",
+      className: "",
+      productType: "",
+      status: "",
+      ediCode: "",
+
       source: "easyDrug",
     };
   } catch (err) {
@@ -76,11 +116,13 @@ async function fetchPermitDrugInfo(itemName) {
   try {
     console.log("[PERMIT DRUG API QUERY]", itemName);
 
+    const serviceKey = getServiceKey();
+
     const res = await axios.get(PERMIT_DRUG_URL, {
       params: {
-        serviceKey: API_KEY,
-        itemName: itemName,
-        numOfRows: 1,
+        serviceKey,
+        item_name: itemName,
+        numOfRows: 10,
         pageNo: 1,
         type: "json",
       },
@@ -91,11 +133,40 @@ async function fetchPermitDrugInfo(itemName) {
       JSON.stringify(res.data, null, 2),
     );
 
-    const item = getItems(res.data)[0];
-    if (!item) return null;
+    const items = getItems(res.data);
 
-    const name = pick(item, ["itemName", "itemName", "itemName"]);
-    const company = pick(item, ["ENTP_NAME", "entp_name", "entpName"]);
+    console.log("[PERMIT DRUG ITEMS LENGTH]", items.length);
+    console.log("[PERMIT DRUG FIRST ITEM]", items[0]?.ITEM_NAME);
+
+    const item = items.find((item) => {
+      const name = pick(item, [
+        "ITEM_NAME",
+        "itemName",
+        "ITEM_NM",
+        "PRDLST_NM",
+      ]);
+      return isMatchedMedicine(name, itemName);
+    });
+
+    if (!item) {
+      console.warn("[PERMIT DRUG NO MATCH]", {
+        query: itemName,
+        totalCount: res.data?.body?.totalCount,
+        firstItem: items[0]?.ITEM_NAME,
+      });
+
+      return null;
+    }
+
+    const name = pick(item, ["ITEM_NAME", "itemName", "ITEM_NM", "PRDLST_NM"]);
+
+    const company = pick(item, [
+      "ENTP_NAME",
+      "entp_name",
+      "entpName",
+      "BIZRNO_NM",
+    ]);
+
     const ingredient = pick(item, [
       "ITEM_INGR_NAME",
       "item_ingr_name",
@@ -105,22 +176,32 @@ async function fetchPermitDrugInfo(itemName) {
       "main_item_ingr",
       "mainIngr",
     ]);
+
     const permitDate = pick(item, ["ITEM_PERMIT_DATE", "item_permit_date"]);
+
     const className = pick(item, [
       "SPCLTY_PBLC",
       "spclty_pblc",
       "ETC_OTC_CODE",
       "etc_otc_code",
     ]);
+
     const productType = pick(item, ["PRDUCT_TYPE", "prduct_type"]);
+
     const image = pick(item, ["BIG_PRDT_IMG_URL", "big_prdt_img_url"]);
+
     const status = pick(item, ["CANCEL_NAME", "cancel_name"]);
+
     const ediCode = pick(item, ["EDI_CODE", "edi_code"]);
 
     return {
       name,
+      normalizedName: cleanDisplayName(name),
+
       effect: productType || "",
       usage: "",
+      dosage: "",
+
       caution: "",
       sideEffect: "",
       image,
@@ -152,14 +233,13 @@ async function fetchMedicineInfo(itemName) {
       throw new Error("MEDICINE_API_KEY가 .env에 설정되지 않았습니다.");
     }
 
-    // 1차: e약은요 API
     const easyDrug = await fetchEasyDrugInfo(itemName);
     if (easyDrug) return easyDrug;
 
-    // 2차: 의약품 제품 허가정보 API
     const permitDrug = await fetchPermitDrugInfo(itemName);
     if (permitDrug) return permitDrug;
 
+    console.warn("[MEDICINE API NO RESULT]", itemName);
     return null;
   } catch (err) {
     console.error("[MEDICINE API ERROR]", err.response?.data || err.message);
