@@ -34,13 +34,51 @@ router.post('/', authMiddleware, async (req, res) => {
 router.get('/', authMiddleware, async (req, res) => {
   try {
     const records = await AnalysisRecord.find({ userId: req.user.id })
-      .select('candidates medicineCount cautionCount createdAt')
-      .sort({ createdAt: -1 });
+      .select('candidates medicineCount cautionCount createdAt isPinned pinnedAt')
+      .sort({ isPinned: -1, pinnedAt: -1, createdAt: -1 });
 
     return res.json(records);
   } catch (err) {
     console.error('[ANALYSIS LIST ERROR]', err);
     res.status(500).json({ error: '목록을 불러오지 못했습니다.' });
+  }
+});
+
+// PATCH /api/analysis/:id/pin - 상단 고정 토글
+router.patch('/:id/pin', authMiddleware, async (req, res) => {
+  try {
+    const record = await AnalysisRecord.findOne({
+      _id: req.params.id,
+      userId: req.user.id,
+    });
+
+    if (!record) return res.status(404).json({ error: '기록을 찾을 수 없습니다.' });
+
+    record.isPinned = !record.isPinned;
+    record.pinnedAt = record.isPinned ? new Date() : null;
+    await record.save();
+
+    return res.json({ isPinned: record.isPinned });
+  } catch (err) {
+    console.error('[ANALYSIS PIN ERROR]', err);
+    res.status(500).json({ error: '고정 처리에 실패했습니다.' });
+  }
+});
+
+// DELETE /api/analysis/:id - 기록 삭제
+router.delete('/:id', authMiddleware, async (req, res) => {
+  try {
+    const record = await AnalysisRecord.findOneAndDelete({
+      _id: req.params.id,
+      userId: req.user.id,
+    });
+
+    if (!record) return res.status(404).json({ error: '기록을 찾을 수 없습니다.' });
+
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('[ANALYSIS DELETE ERROR]', err);
+    res.status(500).json({ error: '삭제에 실패했습니다.' });
   }
 });
 
