@@ -34,7 +34,7 @@ router.post('/', authMiddleware, async (req, res) => {
 router.get('/', authMiddleware, async (req, res) => {
   try {
     const records = await AnalysisRecord.find({ userId: req.user.id })
-    .select('candidates medicineCount cautionCount createdAt isPinned pinnedAt')
+    .select('candidates medicineCount cautionCount createdAt title isPinned pinnedAt')
     .sort({ isPinned: -1, pinnedAt: -1, createdAt: -1 });
 
     return res.json(records);
@@ -59,7 +59,7 @@ router.patch('/:id/title', authMiddleware, async (req, res) => {
     const record = await AnalysisRecord.findOneAndUpdate(
         { _id: req.params.id, userId: req.user.id },
         { title },
-        { new: true, select: 'title' },
+        { returnDocument: 'after', select: 'title' },
     );
 
     if (!record) return res.status(404).json({ error: '기록을 찾을 수 없습니다.' });
