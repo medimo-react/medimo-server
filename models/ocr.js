@@ -1,6 +1,10 @@
 const axios = require('axios');
+const path = require('path');
+const { createWorker } = require('tesseract.js');
 
-async function extractTextFromImage(imageBuffer) {
+const TRAINEDDATA_PATH = path.join(__dirname, '..');
+
+async function extractTextWithVision(imageBuffer) {
   const base64Image = imageBuffer.toString('base64');
 
   const response = await axios.post(
@@ -20,13 +24,28 @@ async function extractTextFromImage(imageBuffer) {
   return text;
 }
 
-async function extractTextFromImageSafe(imageBuffer) {
+async function extractTextWithTesseract(imageBuffer) {
+  const worker = await createWorker(['kor', 'eng'], 1, {
+    langPath: TRAINEDDATA_PATH,
+    cachePath: TRAINEDDATA_PATH,
+  });
+
   try {
-    return await extractTextFromImage(imageBuffer);
-  } catch (err) {
-    console.error('[Google Vision OCR] 에러 상세:', err.response?.data ?? err.message);
-    throw err;
+    const { data: { text } } = await worker.recognize(imageBuffer);
+    console.log('[Tesseract OCR] 인식된 텍스트:', text);
+    return text;
+  } finally {
+    await worker.terminate();
   }
 }
 
-module.exports = { extractTextFromImage: extractTextFromImageSafe };
+async function extractTextFromImage(imageBuffer) {
+  try {
+    return await extractTextWithVision(imageBuffer);
+  } catch (err) {
+    console.error('[Google Vision OCR] 실패, Tesseract로 전환:', err.response?.data ?? err.message);
+    return await extractTextWithTesseract(imageBuffer);
+  }
+}
+
+module.exports = { extractTextFromImage };
